@@ -1,0 +1,5 @@
+# Files o directory vscode
+.vscode
+
+# Directory generate by golang
+go.sum
