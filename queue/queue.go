@@ -1,42 +1,39 @@
 package queue
 
-import "errors"
+import (
+	"errors"
 
-// Almacenamiento de los nodos de la cola
-type Node struct {
-	data interface{}
-	prev *Node
-	next *Node
-}
+	"github.com/MaestroShifu/concurrent-queue-golang/queue/node"
+)
 
 // Backend para el manejo de las colas
-type QueueBackend struct {
+type QueueBasic struct {
 	// Punto de inicio y fin
-	head *Node
-	tail *Node
+	head *node.Node
+	tail *node.Node
 
 	// Indicadores de tamaño
 	size    uint32
 	maxSize uint32
 }
 
-func (queue *QueueBackend) createNode(data interface{}) *Node {
-	node := Node{
-		data: data,
-		next: nil,
-		prev: nil,
+func NewQueueBasic(maxSize uint32) *QueueBasic {
+	return &QueueBasic{
+		size:    0,
+		head:    nil,
+		tail:    nil,
+		maxSize: maxSize,
 	}
-	return &node
 }
 
-func (queue *QueueBackend) put(data interface{}) error {
+func (queue *QueueBasic) Put(data interface{}) error {
 	if queue.size >= queue.maxSize {
-		err := errors.New("La cola esta llena")
+		err := errors.New("la cola esta llena")
 		return err
 	}
 
+	node := node.NewNode(data)
 	if queue.size == 0 {
-		node := queue.createNode(data)
 		queue.head = node
 		queue.tail = node
 		queue.size++
@@ -44,25 +41,26 @@ func (queue *QueueBackend) put(data interface{}) error {
 	}
 
 	currentHead := queue.head
-	newHead := queue.createNode(data)
-	newHead.next = currentHead
-	currentHead.prev = newHead
-
-	queue.head = currentHead
+	newHead := node
+	newHead.SetNext(currentHead)
+	currentHead.SetPrev(newHead)
+	queue.head = newHead
+	queue.size++
 	return nil
 }
 
-func (queue *QueueBackend) pop() (interface{}, error) {
+func (queue *QueueBasic) Pop() (interface{}, error) {
 	if queue.size == 0 {
-		err := errors.New("La cola esta vacia")
+		err := errors.New("la cola esta vacia")
 		return nil, err
 	}
 
 	currentEnd := queue.tail
-	newEnd := currentEnd.prev
+	newEnd := currentEnd.GetPrev()
 
 	if newEnd != nil {
-		newEnd.next = nil
+		newEnd.SetNext(nil)
+		queue.tail = newEnd
 	}
 
 	queue.size--
@@ -71,13 +69,13 @@ func (queue *QueueBackend) pop() (interface{}, error) {
 		queue.tail = nil
 	}
 
-	return currentEnd.data, nil
+	return currentEnd.GetData(), nil
 }
 
-func (queue *QueueBackend) isEmpty() bool {
+func (queue *QueueBasic) IsEmpty() bool {
 	return queue.size == 0
 }
 
-func (queue *QueueBackend) isFull() bool {
+func (queue *QueueBasic) IsFull() bool {
 	return queue.size >= queue.maxSize
 }
